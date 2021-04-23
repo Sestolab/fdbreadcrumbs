@@ -1,49 +1,73 @@
 CKEDITOR.dialog.add('fdbreadcrumbs', function(editor){
-	var rows = editor.config.fdbreadcrumbs_maxRows || 6,
-		dialog = {
-			title: editor.lang.fdbreadcrumbs.label,
-			onShow: function(){
-				if (this.widget.data.items)
-					for (var i = 0; i < rows; i++)
-						if (this.widget.data.items[i]){
-							this.setValueOf('info', `txt${i}`, this.widget.data.items[i].txt);
-							this.setValueOf('info', `link${i}`, this.widget.data.items[i].link);
-						}
-			},
-			onOk: function(){
-				for (var i = 0; i < rows; i++)
-					this.widget.pushData('items', this.getValueOf('info', `txt${i}`) && [{
-						txt: this.getValueOf('info', `txt${i}`),
-						link: this.getValueOf('info', `link${i}`)
-					}], i == 0 ? true : null);
-			},
-			contents: [
-				{
-					id: 'info',
-					elements: []
-				}
-			]
-		};
+	var lang = editor.lang.fdbreadcrumbs;
 
-	for (var i = 0; i < rows; i++){
-		dialog.contents[0].elements.push({
-			type: 'hbox',
-			widths: ['40%', '60%'],
-			children: [
+	return {
+		title:lang.label,
+		height: 100,
+		contents: [{
+			id: 'main',
+			elements: [
 				{
-					id: `txt${i}`,
-					type: 'text',
-					label: editor.lang.fdbreadcrumbs.text
+					type: 'html',
+					align: 'center',
+					style: 'margin-bottom: -1em; font-weight: bold; word-spacing: 18em;',
+					html: `<div>${lang.text} ${lang.link}</div>`
 				},
 				{
-					id: `link${i}`,
-					type: 'text',
-					label: editor.lang.fdbreadcrumbs.link
+					type: 'html',
+					id: 'items',
+					html: '',
+					setup: function(widget){
+						widget.data.items.forEach(function(item){
+							newDialogElement(item.txt, item.link);
+						});
+
+						newDialogElement();
+					},
+					commit: function(widget){
+						var items = [];
+
+						this.getElement().find('input:nth-child(odd)').toArray().forEach(function(input){
+							var val = input.getValue();
+
+							val && items.push({
+								txt: val,
+								link: input.getNext().getValue()
+							});
+						});
+
+						widget.setData('items', items);
+					},
+					onHide: function(){
+						this.getElement().setHtml('');
+					}
+				},
+				{
+					type: 'button',
+					label: lang.addItem,
+					style: 'width: 100%;',
+					onClick: function(){
+						newDialogElement();
+					}
 				}
 			]
-		});
+		}]
 	}
 
-	return dialog;
+
+	function newDialogElement(txt, link){
+		var dialog = CKEDITOR.dialog.getCurrent(),
+			div = CKEDITOR.dom.element.createFromHtml('<div class="cke_dialog_ui_text">'),
+			addInput = function(w, v){
+				dialog.addFocusable(div.append(
+					CKEDITOR.dom.element.createFromHtml(`<input style="width: ${w}%" class="cke_dialog_ui_input_text" value="${v || ''}">`)
+				));
+			};
+
+		addInput(40, txt);
+		addInput(60, link);
+
+		dialog.getContentElement('main', 'items').getElement().append(div);
+	}
 });
 
